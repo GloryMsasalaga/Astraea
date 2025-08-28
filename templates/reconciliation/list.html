@@ -1,0 +1,585 @@
+{% extends 'dashboard.html' %}
+{% load static %}
+
+{% block title %}Reconciliation - AuditFlow{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="text-navy mb-1">
+                <i class="fas fa-balance-scale me-3 text-sky-blue"></i>
+                Reconciliation
+            </h1>
+            <p class="text-muted mb-0">Match transactions and resolve discrepancies</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-navy" onclick="exportReconciliation()">
+                <i class="fas fa-download me-2"></i>Export Results
+            </button>
+            <button class="btn btn-sky-blue" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                <i class="fas fa-file-upload me-2"></i>Upload Statement
+            </button>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="kpi-card success position-relative">
+                <div class="kpi-value" id="matchedCount">156</div>
+                <div class="kpi-label">Matched Items</div>
+                <i class="fas fa-check-circle kpi-icon"></i>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="kpi-card coral position-relative">
+                <div class="kpi-value" id="unmatchedCount">23</div>
+                <div class="kpi-label">Unmatched Items</div>
+                <i class="fas fa-exclamation-triangle kpi-icon"></i>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="kpi-card navy position-relative">
+                <div class="kpi-value" id="totalAmount">$12,847.53</div>
+                <div class="kpi-label">Total Amount</div>
+                <i class="fas fa-dollar-sign kpi-icon"></i>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="kpi-card position-relative">
+                <div class="kpi-value" id="accuracyRate">87%</div>
+                <div class="kpi-label">Accuracy Rate</div>
+                <i class="fas fa-chart-line kpi-icon"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Upload Area -->
+    <div class="card mb-4 rounded-3 shadow-sm">
+        <div class="card-header bg-sky-blue text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-file-upload me-2"></i>Upload Bank Statement
+            </h5>
+        </div>
+        <div class="card-body p-3">
+            <div class="file-upload-area" id="reconciliationUpload">
+                <div class="upload-text">
+                    <i class="fas fa-cloud-upload-alt file-upload-icon"></i>
+                    <div class="h5 mb-3">Drag & Drop Bank Statement Here</div>
+                    <div class="text-muted mb-3">or click to select file</div>
+                    <div class="mb-3">
+                        <span class="badge bg-light text-dark me-2">CSV</span>
+                        <span class="badge bg-light text-dark me-2">XLSX</span>
+                        <span class="badge bg-light text-dark me-2">PDF</span>
+                        <span class="badge bg-light text-dark me-2">OFX</span>
+                        <span class="badge bg-light text-dark me-2">QIF</span>
+                    </div>
+                    <small class="text-muted">Supported: Bank statements, credit card statements, transaction exports</small>
+                </div>
+                <input type="file" id="statementFile" accept=".csv,.xlsx,.pdf,.ofx,.qif" style="display: none;">
+            </div>
+            
+            <div class="row mt-3" id="uploadOptions" style="display: none;">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Statement Type</label>
+                    <select class="form-select" id="statementType">
+                        <option value="bank">Bank Statement</option>
+                        <option value="credit">Credit Card Statement</option>
+                        <option value="investment">Investment Account</option>
+                        <option value="paypal">PayPal</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Date Format</label>
+                    <select class="form-select" id="dateFormat">
+                        <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                        <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                        <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Currency</label>
+                    <select class="form-select" id="currency">
+                        <option value="USD">USD ($)</option>
+                        <option value="EUR">EUR (€)</option>
+                        <option value="GBP">GBP (£)</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="mt-3" id="uploadActions" style="display: none;">
+                <button class="btn btn-navy" onclick="processStatement()">
+                    <i class="fas fa-cogs me-2"></i>Process & Match
+                </button>
+                <button class="btn btn-outline-secondary ms-2" onclick="resetUpload()">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reconciliation Results -->
+    <div class="row">
+        <!-- Matched Items -->
+        <div class="col-lg-6 mb-4">
+            <div class="card rounded-3 shadow-sm h-100">
+                <div class="card-header bg-success text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-check-circle me-2"></i>Matched Items
+                        </h5>
+                        <span class="badge bg-light text-success" id="matchedBadge">156</span>
+                    </div>
+                </div>
+                <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+                    <div class="list-group list-group-flush" id="matchedList">
+                        <!-- Matched items will be populated here -->
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between">
+                                    <h6 class="mb-1">Office Supplies Purchase</h6>
+                                    <small class="text-success fw-bold">+$245.67</small>
+                                </div>
+                                <p class="mb-1 text-muted">Amazon Business - Office Equipment</p>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>2024-01-15
+                                    <i class="fas fa-building ms-3 me-1"></i>Business Account
+                                </small>
+                            </div>
+                            <div class="ms-3">
+                                <span class="badge-status completed">Matched</span>
+                            </div>
+                        </div>
+                        
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between">
+                                    <h6 class="mb-1">Client Payment - ABC Corp</h6>
+                                    <small class="text-success fw-bold">+$1,500.00</small>
+                                </div>
+                                <p class="mb-1 text-muted">Invoice #INV-2024-001 Payment</p>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>2024-01-14
+                                    <i class="fas fa-building ms-3 me-1"></i>Business Account
+                                </small>
+                            </div>
+                            <div class="ms-3">
+                                <span class="badge-status completed">Matched</span>
+                            </div>
+                        </div>
+                        
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between">
+                                    <h6 class="mb-1">Software Subscription</h6>
+                                    <small class="text-danger fw-bold">-$99.00</small>
+                                </div>
+                                <p class="mb-1 text-muted">Adobe Creative Cloud Monthly</p>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>2024-01-13
+                                    <i class="fas fa-credit-card ms-3 me-1"></i>Credit Card
+                                </small>
+                            </div>
+                            <div class="ms-3">
+                                <span class="badge-status completed">Matched</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Unmatched Items -->
+        <div class="col-lg-6 mb-4">
+            <div class="card rounded-3 shadow-sm h-100">
+                <div class="card-header bg-coral text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>Unmatched Items
+                        </h5>
+                        <span class="badge bg-light text-coral" id="unmatchedBadge">23</span>
+                    </div>
+                </div>
+                <div class="card-body p-0" style="max-height: 500px; overflow-y: auto;">
+                    <div class="list-group list-group-flush" id="unmatchedList">
+                        <!-- Unmatched items will be populated here -->
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between">
+                                        <h6 class="mb-1">Unknown Transfer</h6>
+                                        <small class="text-danger fw-bold">-$125.00</small>
+                                    </div>
+                                    <p class="mb-1 text-muted">TRANSFER TO EXTERNAL ACCOUNT</p>
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar me-1"></i>2024-01-12
+                                        <i class="fas fa-building ms-3 me-1"></i>Business Account
+                                    </small>
+                                </div>
+                                <div class="ms-3">
+                                    <div class="btn-group-vertical btn-group-sm">
+                                        <button class="btn btn-outline-sky-blue" onclick="createTransaction(125.00, 'transfer')">
+                                            <i class="fas fa-plus me-1"></i>Create
+                                        </button>
+                                        <button class="btn btn-outline-navy" onclick="matchManually('unknown-transfer-1')">
+                                            <i class="fas fa-link me-1"></i>Match
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between">
+                                        <h6 class="mb-1">Bank Fee</h6>
+                                        <small class="text-danger fw-bold">-$15.00</small>
+                                    </div>
+                                    <p class="mb-1 text-muted">MONTHLY MAINTENANCE FEE</p>
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar me-1"></i>2024-01-11
+                                        <i class="fas fa-building ms-3 me-1"></i>Business Account
+                                    </small>
+                                </div>
+                                <div class="ms-3">
+                                    <div class="btn-group-vertical btn-group-sm">
+                                        <button class="btn btn-outline-sky-blue" onclick="createTransaction(15.00, 'fee')">
+                                            <i class="fas fa-plus me-1"></i>Create
+                                        </button>
+                                        <button class="btn btn-outline-navy" onclick="matchManually('bank-fee-1')">
+                                            <i class="fas fa-link me-1"></i>Match
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between">
+                                        <h6 class="mb-1">Cash Deposit</h6>
+                                        <small class="text-success fw-bold">+$500.00</small>
+                                    </div>
+                                    <p class="mb-1 text-muted">ATM DEPOSIT - BRANCH #1234</p>
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar me-1"></i>2024-01-10
+                                        <i class="fas fa-building ms-3 me-1"></i>Business Account
+                                    </small>
+                                </div>
+                                <div class="ms-3">
+                                    <div class="btn-group-vertical btn-group-sm">
+                                        <button class="btn btn-outline-sky-blue" onclick="createTransaction(500.00, 'deposit')">
+                                            <i class="fas fa-plus me-1"></i>Create
+                                        </button>
+                                        <button class="btn btn-outline-navy" onclick="matchManually('cash-deposit-1')">
+                                            <i class="fas fa-link me-1"></i>Match
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reconciliation Actions -->
+    <div class="card rounded-3 shadow-sm">
+        <div class="card-header bg-light-gray">
+            <h5 class="mb-0 text-navy">
+                <i class="fas fa-cogs me-2"></i>Reconciliation Actions
+            </h5>
+        </div>
+        <div class="card-body p-3">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-navy mb-3">Quick Actions</h6>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-sky-blue" onclick="autoMatch()">
+                            <i class="fas fa-magic me-2"></i>Auto-Match Similar Items
+                        </button>
+                        <button class="btn btn-outline-navy" onclick="markAllAsReviewed()">
+                            <i class="fas fa-check-double me-2"></i>Mark All as Reviewed
+                        </button>
+                        <button class="btn btn-outline-coral" onclick="clearAllMatches()">
+                            <i class="fas fa-times me-2"></i>Clear All Matches
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-navy mb-3">Export Options</h6>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-success" onclick="exportReconciliation('excel')">
+                            <i class="fas fa-file-excel me-2"></i>Export to Excel
+                        </button>
+                        <button class="btn btn-outline-success" onclick="exportReconciliation('pdf')">
+                            <i class="fas fa-file-pdf me-2"></i>Generate PDF Report
+                        </button>
+                        <button class="btn btn-outline-success" onclick="exportReconciliation('csv')">
+                            <i class="fas fa-file-csv me-2"></i>Export as CSV
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content rounded-3">
+            <div class="modal-header bg-sky-blue text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-file-upload me-2"></i>Upload Bank Statement
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-3">
+                <div class="alert alert-sky-blue">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Tip:</strong> For best results, ensure your statement includes transaction dates, descriptions, and amounts in separate columns.
+                </div>
+                
+                <div class="file-upload-area mb-3" id="modalFileUpload">
+                    <div class="upload-text">
+                        <i class="fas fa-cloud-upload-alt file-upload-icon"></i>
+                        <div class="h5 mb-3">Select Statement File</div>
+                        <div class="text-muted mb-3">CSV, XLSX, PDF, OFX, or QIF format</div>
+                        <small class="text-muted">Maximum file size: 10MB</small>
+                    </div>
+                    <input type="file" id="modalStatementFile" accept=".csv,.xlsx,.pdf,.ofx,.qif" style="display: none;">
+                </div>
+                
+                <div class="progress mb-3" id="uploadProgress" style="display: none;">
+                    <div class="progress-bar" style="width: 0%"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-navy" onclick="uploadStatement()">
+                    <i class="fas fa-upload me-2"></i>Upload & Process
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    setupFileUpload();
+    loadReconciliationData();
+});
+
+function setupFileUpload() {
+    const areas = ['reconciliationUpload', 'modalFileUpload'];
+    const inputs = ['statementFile', 'modalStatementFile'];
+    
+    areas.forEach((areaId, index) => {
+        const uploadArea = document.getElementById(areaId);
+        const fileInput = document.getElementById(inputs[index]);
+        
+        uploadArea.addEventListener('click', () => fileInput.click());
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFileSelection(files[0], areaId);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelection(e.target.files[0], areaId);
+            }
+        });
+    });
+}
+
+function handleFileSelection(file, areaId) {
+    const uploadArea = document.getElementById(areaId);
+    const uploadText = uploadArea.querySelector('.upload-text');
+    
+    uploadText.innerHTML = `
+        <i class="fas fa-file-check text-success mb-2" style="font-size: 2rem;"></i>
+        <div class="fw-bold text-success">File Selected</div>
+        <div class="text-muted small">${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)</div>
+    `;
+    
+    if (areaId === 'reconciliationUpload') {
+        document.getElementById('uploadOptions').style.display = 'block';
+        document.getElementById('uploadActions').style.display = 'block';
+    }
+}
+
+function loadReconciliationData() {
+    // Load reconciliation data via AJAX
+    fetch('/api/reconciliation/summary/')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('matchedCount').textContent = data.matched || 0;
+            document.getElementById('unmatchedCount').textContent = data.unmatched || 0;
+            document.getElementById('totalAmount').textContent = `$${(data.total_amount || 0).toLocaleString()}`;
+            document.getElementById('accuracyRate').textContent = `${data.accuracy_rate || 0}%`;
+            
+            document.getElementById('matchedBadge').textContent = data.matched || 0;
+            document.getElementById('unmatchedBadge').textContent = data.unmatched || 0;
+        })
+        .catch(error => {
+            console.error('Error loading reconciliation data:', error);
+            showToast('Error loading data', 'error');
+        });
+}
+
+function processStatement() {
+    const fileInput = document.getElementById('statementFile');
+    if (!fileInput.files.length) {
+        showToast('Please select a file first', 'error');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    formData.append('statement_type', document.getElementById('statementType').value);
+    formData.append('date_format', document.getElementById('dateFormat').value);
+    formData.append('currency', document.getElementById('currency').value);
+    
+    showToast('Processing statement...', 'success');
+    
+    fetch('/api/reconciliation/process/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        showToast('Statement processed successfully', 'success');
+        loadReconciliationData();
+        resetUpload();
+    })
+    .catch(error => {
+        showToast('Error processing statement: ' + error.message, 'error');
+    });
+}
+
+function resetUpload() {
+    document.getElementById('statementFile').value = '';
+    document.getElementById('uploadOptions').style.display = 'none';
+    document.getElementById('uploadActions').style.display = 'none';
+    
+    const uploadArea = document.getElementById('reconciliationUpload');
+    const uploadText = uploadArea.querySelector('.upload-text');
+    uploadText.innerHTML = `
+        <i class="fas fa-cloud-upload-alt file-upload-icon"></i>
+        <div class="h5 mb-3">Drag & Drop Bank Statement Here</div>
+        <div class="text-muted mb-3">or click to select file</div>
+        <div class="mb-3">
+            <span class="badge bg-light text-dark me-2">CSV</span>
+            <span class="badge bg-light text-dark me-2">XLSX</span>
+            <span class="badge bg-light text-dark me-2">PDF</span>
+            <span class="badge bg-light text-dark me-2">OFX</span>
+            <span class="badge bg-light text-dark me-2">QIF</span>
+        </div>
+        <small class="text-muted">Supported: Bank statements, credit card statements, transaction exports</small>
+    `;
+}
+
+function createTransaction(amount, type) {
+    // Open create transaction modal or form
+    showToast(`Creating ${type} transaction for $${amount}`, 'success');
+}
+
+function matchManually(itemId) {
+    // Open manual matching interface
+    showToast('Opening manual match interface...', 'success');
+}
+
+function autoMatch() {
+    showToast('Running auto-match algorithm...', 'success');
+    
+    setTimeout(() => {
+        loadReconciliationData();
+        showToast('Auto-match completed. Found 12 new matches.', 'success');
+    }, 2000);
+}
+
+function markAllAsReviewed() {
+    if (confirm('Mark all items as reviewed? This cannot be undone.')) {
+        showToast('All items marked as reviewed', 'success');
+    }
+}
+
+function clearAllMatches() {
+    if (confirm('Clear all matches? This will reset the reconciliation process.')) {
+        showToast('All matches cleared', 'success');
+        loadReconciliationData();
+    }
+}
+
+function exportReconciliation(format) {
+    showToast(`Exporting reconciliation report as ${format.toUpperCase()}...`, 'success');
+    
+    // Simulate export
+    setTimeout(() => {
+        showToast(`Reconciliation report exported successfully`, 'success');
+    }, 2000);
+}
+
+function uploadStatement() {
+    const fileInput = document.getElementById('modalStatementFile');
+    if (!fileInput.files.length) {
+        showToast('Please select a file to upload', 'error');
+        return;
+    }
+    
+    const progressBar = document.getElementById('uploadProgress');
+    progressBar.style.display = 'block';
+    
+    // Simulate upload progress
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress >= 100) {
+            progress = 100;
+            clearInterval(interval);
+            setTimeout(() => {
+                bootstrap.Modal.getInstance(document.getElementById('uploadModal')).hide();
+                loadReconciliationData();
+                showToast('Statement uploaded and processed successfully', 'success');
+            }, 500);
+        }
+        progressBar.querySelector('.progress-bar').style.width = progress + '%';
+    }, 200);
+}
+
+function showToast(message, type) {
+    const toastId = type === 'error' ? 'errorToast' : 'successToast';
+    const messageId = type === 'error' ? 'errorToastMessage' : 'successToastMessage';
+    
+    document.getElementById(messageId).textContent = message;
+    const toast = new bootstrap.Toast(document.getElementById(toastId));
+    toast.show();
+}
+</script>
+{% endblock %}

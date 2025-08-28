@@ -1,0 +1,861 @@
+{% extends 'base_new.html' %}
+{% load static %}
+
+{% block title %}Settings - AuditFlow{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="text-navy mb-1">
+                <i class="fas fa-cog me-3 text-sky-blue"></i>
+                Settings
+            </h1>
+            <p class="text-muted mb-0">Manage your account preferences and system settings</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-navy" onclick="resetToDefaults()">
+                <i class="fas fa-undo me-2"></i>Reset to Defaults
+            </button>
+            <button class="btn btn-sky-blue" onclick="saveAllSettings()">
+                <i class="fas fa-save me-2"></i>Save Changes
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Settings Navigation -->
+        <div class="col-lg-3 mb-4">
+            <div class="card rounded-3 shadow-sm">
+                <div class="card-header bg-light-gray">
+                    <h6 class="mb-0 text-navy">
+                        <i class="fas fa-list me-2"></i>Settings Categories
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        <a href="#profile" class="list-group-item list-group-item-action active" onclick="showSection('profile')">
+                            <i class="fas fa-user me-2 text-sky-blue"></i>Profile & Account
+                        </a>
+                        <a href="#appearance" class="list-group-item list-group-item-action" onclick="showSection('appearance')">
+                            <i class="fas fa-palette me-2 text-sky-blue"></i>Appearance
+                        </a>
+                        <a href="#notifications" class="list-group-item list-group-item-action" onclick="showSection('notifications')">
+                            <i class="fas fa-bell me-2 text-sky-blue"></i>Notifications
+                        </a>
+                        <a href="#security" class="list-group-item list-group-item-action" onclick="showSection('security')">
+                            <i class="fas fa-shield-alt me-2 text-sky-blue"></i>Security
+                        </a>
+                        <a href="#preferences" class="list-group-item list-group-item-action" onclick="showSection('preferences')">
+                            <i class="fas fa-sliders-h me-2 text-sky-blue"></i>Preferences
+                        </a>
+                        <a href="#data" class="list-group-item list-group-item-action" onclick="showSection('data')">
+                            <i class="fas fa-database me-2 text-sky-blue"></i>Data & Export
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Content -->
+        <div class="col-lg-9">
+            <!-- Profile & Account Section -->
+            <div id="profile-section" class="settings-section">
+                <div class="card rounded-3 shadow-sm mb-4">
+                    <div class="card-header bg-navy text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-user me-2"></i>Profile & Account Information
+                        </h5>
+                    </div>
+                    <div class="card-body p-3">
+                        <form id="profileForm">
+                            {% csrf_token %}
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">First Name</label>
+                                    <input type="text" class="form-control" id="firstName" value="{{ user.first_name }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Last Name</label>
+                                    <input type="text" class="form-control" id="lastName" value="{{ user.last_name }}">
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Email Address</label>
+                                <input type="email" class="form-control" id="email" value="{{ user.email }}">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Username</label>
+                                <input type="text" class="form-control" id="username" value="{{ user.username }}" readonly>
+                                <small class="text-muted">Username cannot be changed</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Company Name</label>
+                                <input type="text" class="form-control" id="companyName" placeholder="Enter your company name">
+                            </div>
+                            
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Phone Number</label>
+                                    <input type="tel" class="form-control" id="phoneNumber" placeholder="+1 (555) 123-4567">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Time Zone</label>
+                                    <select class="form-select" id="timeZone">
+                                        <option value="America/New_York">Eastern Time (ET)</option>
+                                        <option value="America/Chicago">Central Time (CT)</option>
+                                        <option value="America/Denver">Mountain Time (MT)</option>
+                                        <option value="America/Los_Angeles">Pacific Time (PT)</option>
+                                        <option value="UTC">UTC</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-end">
+                                <button type="button" class="btn btn-navy" onclick="updateProfile()">
+                                    <i class="fas fa-save me-2"></i>Update Profile
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Appearance Section -->
+            <div id="appearance-section" class="settings-section d-none">
+                <div class="card rounded-3 shadow-sm mb-4">
+                    <div class="card-header bg-sky-blue text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-palette me-2"></i>Appearance & Theme
+                        </h5>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Theme Selection</label>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="theme-card active" data-theme="default" onclick="selectTheme('default')">
+                                        <div class="theme-preview bg-sky-blue">
+                                            <div class="theme-accent bg-navy"></div>
+                                        </div>
+                                        <div class="theme-name">Default (Sky Blue)</div>
+                                        <i class="fas fa-check theme-check"></i>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="theme-card" data-theme="dark" onclick="selectTheme('dark')">
+                                        <div class="theme-preview bg-dark">
+                                            <div class="theme-accent bg-secondary"></div>
+                                        </div>
+                                        <div class="theme-name">Dark Mode</div>
+                                        <i class="fas fa-check theme-check"></i>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="theme-card" data-theme="light" onclick="selectTheme('light')">
+                                        <div class="theme-preview bg-light">
+                                            <div class="theme-accent bg-primary"></div>
+                                        </div>
+                                        <div class="theme-name">Light Mode</div>
+                                        <i class="fas fa-check theme-check"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Dashboard Layout</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="layout" id="layoutCompact" value="compact">
+                                <label class="form-check-label" for="layoutCompact">
+                                    Compact - More information in less space
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="layout" id="layoutStandard" value="standard" checked>
+                                <label class="form-check-label" for="layoutStandard">
+                                    Standard - Balanced layout with good readability
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="layout" id="layoutSpacious" value="spacious">
+                                <label class="form-check-label" for="layoutSpacious">
+                                    Spacious - More white space and larger elements
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Sidebar Behavior</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="sidebarAutoCollapse" checked>
+                                <label class="form-check-label" for="sidebarAutoCollapse">
+                                    Auto-collapse sidebar on smaller screens
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-end">
+                            <button type="button" class="btn btn-navy" onclick="applyThemeSettings()">
+                                <i class="fas fa-palette me-2"></i>Apply Theme
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notifications Section -->
+            <div id="notifications-section" class="settings-section d-none">
+                <div class="card rounded-3 shadow-sm mb-4">
+                    <div class="card-header bg-coral text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-bell me-2"></i>Notification Preferences
+                        </h5>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="mb-4">
+                            <h6 class="fw-semibold">Email Notifications</h6>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="emailReports" checked>
+                                <label class="form-check-label" for="emailReports">
+                                    Report generation completed
+                                </label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="emailReconciliation" checked>
+                                <label class="form-check-label" for="emailReconciliation">
+                                    Reconciliation status updates
+                                </label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="emailAlerts">
+                                <label class="form-check-label" for="emailAlerts">
+                                    System alerts and errors
+                                </label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="emailWeekly">
+                                <label class="form-check-label" for="emailWeekly">
+                                    Weekly summary reports
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h6 class="fw-semibold">In-App Notifications</h6>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="appTransactions" checked>
+                                <label class="form-check-label" for="appTransactions">
+                                    New transaction additions
+                                </label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="appUploads" checked>
+                                <label class="form-check-label" for="appUploads">
+                                    Document upload status
+                                </label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="appReminders" checked>
+                                <label class="form-check-label" for="appReminders">
+                                    Task reminders
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-end">
+                            <button type="button" class="btn btn-navy" onclick="updateNotifications()">
+                                <i class="fas fa-save me-2"></i>Save Preferences
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Section -->
+            <div id="security-section" class="settings-section d-none">
+                <div class="card rounded-3 shadow-sm mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            <i class="fas fa-shield-alt me-2"></i>Security Settings
+                        </h5>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="mb-4">
+                            <h6 class="fw-semibold">Change Password</h6>
+                            <form id="passwordForm">
+                                <div class="mb-3">
+                                    <label class="form-label">Current Password</label>
+                                    <input type="password" class="form-control" id="currentPassword">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">New Password</label>
+                                    <input type="password" class="form-control" id="newPassword">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Confirm New Password</label>
+                                    <input type="password" class="form-control" id="confirmPassword">
+                                </div>
+                                <button type="button" class="btn btn-warning" onclick="changePassword()">
+                                    <i class="fas fa-key me-2"></i>Change Password
+                                </button>
+                            </form>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h6 class="fw-semibold">Two-Factor Authentication</h6>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" id="enable2FA">
+                                <label class="form-check-label" for="enable2FA">
+                                    Enable two-factor authentication
+                                </label>
+                            </div>
+                            <button type="button" class="btn btn-outline-navy" onclick="setup2FA()" disabled id="setup2FABtn">
+                                <i class="fas fa-mobile-alt me-2"></i>Setup 2FA
+                            </button>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h6 class="fw-semibold">Active Sessions</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Device</th>
+                                            <th>Location</th>
+                                            <th>Last Active</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>
+                                                <i class="fas fa-desktop text-sky-blue me-2"></i>
+                                                Current Session
+                                            </td>
+                                            <td>New York, US</td>
+                                            <td>Now</td>
+                                            <td>
+                                                <span class="badge bg-success">Active</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-outline-danger" onclick="logoutAllSessions()">
+                                <i class="fas fa-sign-out-alt me-2"></i>Logout All Sessions
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preferences Section -->
+            <div id="preferences-section" class="settings-section d-none">
+                <div class="card rounded-3 shadow-sm mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-sliders-h me-2"></i>System Preferences
+                        </h5>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="mb-4">
+                            <h6 class="fw-semibold">Data Display</h6>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Date Format</label>
+                                    <select class="form-select" id="dateFormat">
+                                        <option value="MM/DD/YYYY">MM/DD/YYYY (US)</option>
+                                        <option value="DD/MM/YYYY">DD/MM/YYYY (International)</option>
+                                        <option value="YYYY-MM-DD">YYYY-MM-DD (ISO)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Currency</label>
+                                    <select class="form-select" id="currency">
+                                        <option value="USD">USD ($)</option>
+                                        <option value="EUR">EUR (€)</option>
+                                        <option value="GBP">GBP (£)</option>
+                                        <option value="CAD">CAD (C$)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Items per Page</label>
+                                    <select class="form-select" id="itemsPerPage">
+                                        <option value="10">10</option>
+                                        <option value="25" selected>25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Default Sort</label>
+                                    <select class="form-select" id="defaultSort">
+                                        <option value="date_desc">Date (Newest First)</option>
+                                        <option value="date_asc">Date (Oldest First)</option>
+                                        <option value="amount_desc">Amount (Highest First)</option>
+                                        <option value="amount_asc">Amount (Lowest First)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h6 class="fw-semibold">Automation</h6>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="autoBackup" checked>
+                                <label class="form-check-label" for="autoBackup">
+                                    Automatic daily backups
+                                </label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="autoReconcile">
+                                <label class="form-check-label" for="autoReconcile">
+                                    Auto-reconcile matching transactions
+                                </label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="autoReports" checked>
+                                <label class="form-check-label" for="autoReports">
+                                    Generate monthly reports automatically
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-end">
+                            <button type="button" class="btn btn-navy" onclick="updatePreferences()">
+                                <i class="fas fa-save me-2"></i>Save Preferences
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data & Export Section -->
+            <div id="data-section" class="settings-section d-none">
+                <div class="card rounded-3 shadow-sm mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-database me-2"></i>Data Management & Export
+                        </h5>
+                    </div>
+                    <div class="card-body p-3">
+                        <div class="mb-4">
+                            <h6 class="fw-semibold">Export Data</h6>
+                            <p class="text-muted">Download your data in various formats</p>
+                            <div class="row g-2">
+                                <div class="col-md-3">
+                                    <button class="btn btn-outline-info w-100" onclick="exportData('transactions')">
+                                        <i class="fas fa-file-csv me-2"></i>Transactions (CSV)
+                                    </button>
+                                </div>
+                                <div class="col-md-3">
+                                    <button class="btn btn-outline-info w-100" onclick="exportData('reports')">
+                                        <i class="fas fa-file-pdf me-2"></i>Reports (PDF)
+                                    </button>
+                                </div>
+                                <div class="col-md-3">
+                                    <button class="btn btn-outline-info w-100" onclick="exportData('all')">
+                                        <i class="fas fa-file-archive me-2"></i>All Data (ZIP)
+                                    </button>
+                                </div>
+                                <div class="col-md-3">
+                                    <button class="btn btn-outline-info w-100" onclick="exportData('backup')">
+                                        <i class="fas fa-database me-2"></i>Full Backup
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h6 class="fw-semibold text-danger">Danger Zone</h6>
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Warning:</strong> These actions cannot be undone. Please be careful.
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-outline-warning" onclick="clearCache()">
+                                    <i class="fas fa-broom me-2"></i>Clear Cache
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="deleteAccount()">
+                                    <i class="fas fa-user-times me-2"></i>Delete Account
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logout Section -->
+            <div class="card rounded-3 shadow-sm">
+                <div class="card-body p-3 text-center">
+                    <h6 class="text-muted mb-3">Session Management</h6>
+                    <button class="btn btn-outline-danger" onclick="logout()">
+                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    $('[data-bs-toggle="tooltip"]').tooltip();
+    
+    // Set up 2FA toggle
+    document.getElementById('enable2FA').addEventListener('change', function() {
+        document.getElementById('setup2FABtn').disabled = !this.checked;
+    });
+});
+
+function showSection(sectionName) {
+    // Hide all sections
+    document.querySelectorAll('.settings-section').forEach(section => {
+        section.classList.add('d-none');
+    });
+    
+    // Show selected section
+    document.getElementById(sectionName + '-section').classList.remove('d-none');
+    
+    // Update navigation
+    document.querySelectorAll('.list-group-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    event.target.classList.add('active');
+}
+
+function selectTheme(themeName) {
+    // Update theme cards
+    document.querySelectorAll('.theme-card').forEach(card => {
+        card.classList.remove('active');
+    });
+    document.querySelector(`[data-theme="${themeName}"]`).classList.add('active');
+}
+
+function updateProfile() {
+    const profileData = {
+        firstName: document.getElementById('firstName').value,
+        lastName: document.getElementById('lastName').value,
+        email: document.getElementById('email').value,
+        companyName: document.getElementById('companyName').value,
+        phoneNumber: document.getElementById('phoneNumber').value,
+        timeZone: document.getElementById('timeZone').value
+    };
+    
+    // Simulate API call
+    fetch('/api/profile/update/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify(profileData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        showToast('Profile updated successfully!', 'success');
+    })
+    .catch(error => {
+        showToast('Error updating profile: ' + error.message, 'error');
+    });
+}
+
+function applyThemeSettings() {
+    const selectedTheme = document.querySelector('.theme-card.active').dataset.theme;
+    const layout = document.querySelector('input[name="layout"]:checked').value;
+    const sidebarAutoCollapse = document.getElementById('sidebarAutoCollapse').checked;
+    
+    showToast('Theme settings applied successfully!', 'success');
+    
+    // Apply theme changes (this would typically involve CSS class changes)
+    if (selectedTheme === 'dark') {
+        document.body.classList.add('dark-theme');
+    } else {
+        document.body.classList.remove('dark-theme');
+    }
+}
+
+function updateNotifications() {
+    const notificationSettings = {
+        emailReports: document.getElementById('emailReports').checked,
+        emailReconciliation: document.getElementById('emailReconciliation').checked,
+        emailAlerts: document.getElementById('emailAlerts').checked,
+        emailWeekly: document.getElementById('emailWeekly').checked,
+        appTransactions: document.getElementById('appTransactions').checked,
+        appUploads: document.getElementById('appUploads').checked,
+        appReminders: document.getElementById('appReminders').checked
+    };
+    
+    fetch('/api/notifications/update/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify(notificationSettings)
+    })
+    .then(response => response.json())
+    .then(data => {
+        showToast('Notification preferences updated!', 'success');
+    })
+    .catch(error => {
+        showToast('Error updating notifications: ' + error.message, 'error');
+    });
+}
+
+function changePassword() {
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    
+    if (newPassword !== confirmPassword) {
+        showToast('New passwords do not match!', 'error');
+        return;
+    }
+    
+    if (newPassword.length < 8) {
+        showToast('Password must be at least 8 characters long!', 'error');
+        return;
+    }
+    
+    fetch('/api/password/change/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify({
+            current_password: currentPassword,
+            new_password: newPassword
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        showToast('Password changed successfully!', 'success');
+        document.getElementById('passwordForm').reset();
+    })
+    .catch(error => {
+        showToast('Error changing password: ' + error.message, 'error');
+    });
+}
+
+function setup2FA() {
+    showToast('Redirecting to 2FA setup...', 'success');
+    // Implement 2FA setup
+}
+
+function logoutAllSessions() {
+    if (confirm('Are you sure you want to logout all sessions? You will need to login again.')) {
+        fetch('/api/sessions/logout-all/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.href = '/login/';
+            }
+        });
+    }
+}
+
+function updatePreferences() {
+    const preferences = {
+        dateFormat: document.getElementById('dateFormat').value,
+        currency: document.getElementById('currency').value,
+        itemsPerPage: document.getElementById('itemsPerPage').value,
+        defaultSort: document.getElementById('defaultSort').value,
+        autoBackup: document.getElementById('autoBackup').checked,
+        autoReconcile: document.getElementById('autoReconcile').checked,
+        autoReports: document.getElementById('autoReports').checked
+    };
+    
+    fetch('/api/preferences/update/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: JSON.stringify(preferences)
+    })
+    .then(response => response.json())
+    .then(data => {
+        showToast('Preferences updated successfully!', 'success');
+    })
+    .catch(error => {
+        showToast('Error updating preferences: ' + error.message, 'error');
+    });
+}
+
+function exportData(type) {
+    showToast(`Preparing ${type} export...`, 'success');
+    
+    // Simulate file download
+    setTimeout(() => {
+        showToast(`${type} export ready for download!`, 'success');
+        // window.open(`/api/export/${type}/`);
+    }, 2000);
+}
+
+function clearCache() {
+    if (confirm('Are you sure you want to clear the cache? This may slow down the application temporarily.')) {
+        fetch('/api/cache/clear/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            showToast('Cache cleared successfully!', 'success');
+        })
+        .catch(error => {
+            showToast('Error clearing cache: ' + error.message, 'error');
+        });
+    }
+}
+
+function deleteAccount() {
+    const confirmation = prompt('Type "DELETE" to confirm account deletion:');
+    if (confirmation === 'DELETE') {
+        if (confirm('This action cannot be undone. Are you absolutely sure?')) {
+            fetch('/api/account/delete/', {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    showToast('Account deleted successfully. Redirecting...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                }
+            })
+            .catch(error => {
+                showToast('Error deleting account: ' + error.message, 'error');
+            });
+        }
+    } else if (confirmation !== null) {
+        showToast('Account deletion cancelled - confirmation text did not match.', 'error');
+    }
+}
+
+function logout() {
+    if (confirm('Are you sure you want to logout?')) {
+        window.location.href = '/logout/';
+    }
+}
+
+function resetToDefaults() {
+    if (confirm('Reset all settings to default values?')) {
+        showToast('Settings reset to defaults!', 'success');
+        // Reset form values to defaults
+        location.reload();
+    }
+}
+
+function saveAllSettings() {
+    // Save all settings across all sections
+    Promise.all([
+        updateProfile(),
+        updateNotifications(),
+        updatePreferences()
+    ]).then(() => {
+        showToast('All settings saved successfully!', 'success');
+    }).catch(error => {
+        showToast('Error saving some settings', 'error');
+    });
+}
+
+function showToast(message, type) {
+    const toastId = type === 'error' ? 'errorToast' : 'successToast';
+    const messageId = type === 'error' ? 'errorToastMessage' : 'successToastMessage';
+    
+    document.getElementById(messageId).textContent = message;
+    const toast = new bootstrap.Toast(document.getElementById(toastId));
+    toast.show();
+}
+</script>
+
+<style>
+.theme-card {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    text-align: center;
+}
+
+.theme-card:hover {
+    border-color: #87CEEB;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.theme-card.active {
+    border-color: #1e3a8a;
+    background-color: #f8f9fa;
+}
+
+.theme-preview {
+    height: 60px;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    position: relative;
+}
+
+.theme-accent {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 0 4px 0 4px;
+}
+
+.theme-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #495057;
+}
+
+.theme-check {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    color: #28a745;
+    display: none;
+}
+
+.theme-card.active .theme-check {
+    display: block;
+}
+
+.settings-section {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>
+{% endblock %}

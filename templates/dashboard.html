@@ -1,0 +1,713 @@
+{% extends 'base_new.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Astraea{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Welcome Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="text-navy mb-2">
+                        <i class="fas fa-tachometer-alt me-3 text-sky-blue"></i>
+                        Welcome back, {{ user.first_name|default:user.username }}!
+                        <span class="fs-6 text-muted">{{ today|date:"F d, Y" }}</span>
+                    </h1>
+                    <p class="text-muted mb-0">Here's your financial overview for today</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-navy" onclick="exportDashboard()">
+                        <i class="fas fa-download me-2"></i>Export
+                    </button>
+                    <button class="btn btn-sky-blue" onclick="refreshDashboard()">
+                        <i class="fas fa-sync-alt me-2"></i>Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="kpi-card sky-blue position-relative">
+                <div class="kpi-value" id="totalBalance">$0.00</div>
+                <div class="kpi-label">Total Balance</div>
+                <div class="kpi-change positive">+2.5%</div>
+                <i class="fas fa-wallet kpi-icon"></i>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="kpi-card navy position-relative">
+                <div class="kpi-value" id="monthlyIncome">$0.00</div>
+                <div class="kpi-label">Monthly Income</div>
+                <div class="kpi-change positive">+8.1%</div>
+                <i class="fas fa-arrow-up kpi-icon"></i>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="kpi-card coral position-relative">
+                <div class="kpi-value" id="monthlyExpenses">$0.00</div>
+                <div class="kpi-label">Monthly Expenses</div>
+                <div class="kpi-change negative">-3.2%</div>
+                <i class="fas fa-arrow-down kpi-icon"></i>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="kpi-card success position-relative">
+                <div class="kpi-value" id="pendingItems">0</div>
+                <div class="kpi-label">Pending Items</div>
+                <div class="kpi-change neutral">No change</div>
+                <i class="fas fa-clock kpi-icon"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card rounded-3 shadow-sm">
+                <div class="card-header bg-navy text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-line me-2"></i>Cash Flow Trend
+                        </h5>
+                        <select class="form-select form-select-sm text-dark" id="cashFlowPeriod" style="width: auto;">
+                            <option value="7">Last 7 Days</option>
+                            <option value="30" selected>Last 30 Days</option>
+                            <option value="90">Last 3 Months</option>
+                            <option value="365">Last Year</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body p-3">
+                    <div class="chart-container">
+                        <canvas id="cashFlowChart" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card rounded-3 shadow-sm">
+                <div class="card-header bg-light-gray">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 text-navy">
+                            <i class="fas fa-chart-pie me-2"></i>Expense Categories
+                        </h5>
+                        <button class="btn btn-sm btn-outline-navy" onclick="toggleExpenseView()">
+                            <i class="fas fa-exchange-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-3">
+                    <div class="chart-container">
+                        <canvas id="expenseChart"></canvas>
+                    </div>
+                    <div class="mt-3" id="expenseLegend">
+                        <!-- Legend will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card rounded-3 shadow-sm border-sky-blue">
+                <div class="card-body p-3 text-center">
+                    <i class="fas fa-percentage text-sky-blue mb-3" style="font-size: 2.5rem;"></i>
+                    <h6 class="text-navy mb-2">Expense Ratio</h6>
+                    <div class="h4 text-sky-blue mb-1" id="expenseRatio">0%</div>
+                    <small class="text-muted">of total income</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card rounded-3 shadow-sm border-navy">
+                <div class="card-body p-3 text-center">
+                    <i class="fas fa-piggy-bank text-navy mb-3" style="font-size: 2.5rem;"></i>
+                    <h6 class="text-navy mb-2">Savings Rate</h6>
+                    <div class="h4 text-navy mb-1" id="savingsRate">0%</div>
+                    <small class="text-muted">this month</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card rounded-3 shadow-sm border-coral">
+                <div class="card-body p-3 text-center">
+                    <i class="fas fa-chart-line text-coral mb-3" style="font-size: 2.5rem;"></i>
+                    <h6 class="text-navy mb-2">Avg Daily Spend</h6>
+                    <div class="h4 text-coral mb-1" id="avgDailySpend">$0.00</div>
+                    <small class="text-muted">last 30 days</small>
+                                                    <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                                                            <!-- Removed upload document button (CRUD) -->
+                                                                    <i class="fas fa-upload fa-2x mb-2"></i>
+                                                                    <span class="small">Upload Document</span>
+                                                            </button>
+                                                    </div>
+                                                    <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                                                            <!-- Removed delete document button (CRUD) -->
+                                                                    <i class="fas fa-trash fa-2x mb-2"></i>
+                                                                    <!-- Removed delete document label (CRUD) -->
+                                                            </button>
+                                                    </div>
+                                                    <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                                                            <!-- Removed update document button (CRUD) -->
+                                                                    <!-- Removed edit icon (CRUD) -->
+                                                                    <!-- Removed update document label (CRUD) -->
+                                                            </button>
+                                                    </div>
+    <!-- Recent Transactions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card rounded-3 shadow-sm">
+                <div class="card-header bg-navy text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+
+            <!-- Document Modals -->
+            <!-- Upload Modal -->
+            <!-- Removed upload document modal (CRUD) -->
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <!-- Removed upload document modal title (CRUD) -->
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <!-- Removed upload document form (CRUD) -->
+                                <div class="mb-3">
+                                    <label for="documentFile" class="form-label">Select File</label>
+                                    <input type="file" class="form-control" id="documentFile" name="file" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="documentType" class="form-label">Document Type</label>
+                                    <select class="form-select" id="documentType" name="document_type" required>
+                                        <option value="invoice">Invoice</option>
+                                        <option value="receipt">Receipt</option>
+                                        <option value="contract">Contract</option>
+                                        <option value="statement">Statement</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-sky-blue">Upload</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Removed update modal (CRUD) -->
+            <!-- Removed update document modal (CRUD) -->
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <!-- Removed update document modal title (CRUD) -->
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <!-- Removed update document form (CRUD) -->
+                                <div class="mb-3">
+                                    <!-- Removed update document ID label (CRUD) -->
+                                    <!-- Removed update document ID input (CRUD) -->
+                                </div>
+                                <div class="mb-3">
+                                    <!-- Removed update document type label (CRUD) -->
+                                    <!-- Removed update document type select (CRUD) -->
+                                        <option value="invoice">Invoice</option>
+                                        <option value="receipt">Receipt</option>
+                                        <option value="contract">Contract</option>
+                                        <option value="statement">Statement</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </div>
+                                <!-- Removed update button (CRUD) -->
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Removed delete modal (CRUD) -->
+            <!-- Removed delete document modal (CRUD) -->
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <!-- Removed delete document modal title (CRUD) -->
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <!-- Removed delete document form (CRUD) -->
+                                <div class="mb-3">
+                                    <!-- Removed delete document ID label (CRUD) -->
+                                    <!-- Removed delete document ID input (CRUD) -->
+                                </div>
+                                <!-- Removed delete button (CRUD) -->
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+                        <i class="fas fa-history me-2"></i>Recent Transactions
+                    </h5>
+                    <div class="d-flex align-items-center gap-3">
+                        <select class="form-select form-select-sm text-dark" id="transactionFilter" style="width: auto;">
+                            <option value="">All Types</option>
+                            <option value="income">Income</option>
+                            <option value="expense">Expenses</option>
+                            <option value="transfer">Transfers</option>
+                        </select>
+                        <a href="/transactions/" class="btn btn-sm btn-outline-light">View All</a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="dashboardTransactionsTable">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Category</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentTransactionsBody">
+                                <!-- Data will be loaded via AJAX -->
+                                <tr>
+                                    <td colspan="6" class="text-center py-4">
+                                        <div class="spinner-border text-sky-blue" role="status">
+                                            <span class="visually-hidden">Loading...</span>
+                                        </div>
+                                        <div class="mt-2 text-muted">Loading transactions...</div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card rounded-3 shadow-sm">
+                <div class="card-header bg-light-gray">
+                    <h5 class="mb-0 text-navy">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body p-3">
+                    <div class="row g-3">
+                        <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                            <button class="btn btn-outline-sky-blue w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3" onclick="quickAddTransaction()">
+                                <i class="fas fa-plus fa-2x mb-2"></i>
+                                <span class="small">Add Transaction</span>
+                            </button>
+                        </div>
+                        <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                            <button class="btn btn-outline-navy w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3" onclick="quickReconcile()">
+                                <i class="fas fa-balance-scale fa-2x mb-2"></i>
+                                <span class="small">Reconcile</span>
+                            </button>
+                        </div>
+                        <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                            <button class="btn btn-outline-success w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3" onclick="generateQuickReport()">
+                                <i class="fas fa-chart-bar fa-2x mb-2"></i>
+                                <span class="small">Generate Report</span>
+                            </button>
+                        </div>
+                        <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                            <button class="btn btn-outline-coral w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3" onclick="uploadDocument()">
+                                <i class="fas fa-upload fa-2x mb-2"></i>
+                                <span class="small">Upload Document</span>
+                            </button>
+                        </div>
+                        <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                            <button class="btn btn-outline-warning w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3" onclick="viewAlerts()">
+                                <i class="fas fa-bell fa-2x mb-2"></i>
+                                <span class="small">View Alerts</span>
+                            </button>
+                        </div>
+                        <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                            <button class="btn btn-outline-info w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3" onclick="exportData()">
+                                <i class="fas fa-download fa-2x mb-2"></i>
+                                <span class="small">Export Data</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric-card coral slide-up">
+                <i class="fas fa-clock mb-3" style="font-size: 2rem; opacity: 0.8;"></i>
+                <h3>{{ pending_documents|default:0 }}</h3>
+                <p>Pending Review</p>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric-card slide-up">
+                <i class="fas fa-dollar-sign mb-3" style="font-size: 2rem; opacity: 0.8;"></i>
+                <h3>${{ total_amount|default:0|floatformat:0 }}</h3>
+                <p>Total Amount</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <div class="col-lg-8 mb-3">
+            <div class="card">
+                <div class="card-header bg-navy">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Monthly Processing Volume
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="volumeChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4 mb-3">
+            <div class="card">
+                <div class="card-header bg-sky-blue">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        Document Status
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    <canvas id="statusChart" height="150"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity & Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-lg-8 mb-3">
+            <div class="card">
+                <div class="card-header bg-light-gray">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 text-navy">
+                            <i class="fas fa-history me-2"></i>
+                            Recent Activity
+                        </h5>
+                        <button class="btn btn-sm btn-outline-navy" onclick="showDocumentsSection()">
+                            View All <i class="fas fa-arrow-right ms-1"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Document</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Amount</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for doc in recent_documents %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-file-pdf text-coral me-2"></i>
+                                            <span class="fw-medium">{{ doc.name|truncatechars:30 }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark">{{ doc.document_type|title }}</span>
+                                    </td>
+                                    <td>
+                                        {% if doc.status == 'completed' %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check me-1"></i>Completed
+                                            </span>
+                                        {% elif doc.status == 'processing' %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-spinner me-1"></i>Processing
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-clock me-1"></i>Pending
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="fw-bold">${{ doc.amount|floatformat:2|default:'-' }}</td>
+                                    <td class="text-muted">{{ doc.uploaded_at|date:"M d, Y" }}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-sky-blue btn-sm" onclick="showDocumentDetail('{{ doc.id }}')" data-bs-toggle="tooltip" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <a href="#" 
+                                               class="btn btn-outline-navy btn-sm"
+                                               data-bs-toggle="tooltip" 
+                                               title="Download">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-4 text-muted">
+                                        <i class="fas fa-inbox fa-2x mb-3 d-block"></i>
+                                        No recent documents found. 
+                                        <button class="btn btn-sky-blue btn-sm" onclick="showUploadModal()">Upload your first document</button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 mb-3">
+            <div class="card">
+                <div class="card-header bg-light-gray">
+                    <h5 class="mb-0 text-navy">
+                        <i class="fas fa-bolt me-2"></i>
+                        Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-3">
+                        <button class="btn btn-sky-blue btn-lg" onclick="showUploadModal()">
+                            <i class="fas fa-cloud-upload-alt me-2"></i>
+                            Upload Documents
+                        </button>
+                        <button class="btn btn-navy btn-lg" onclick="showReconciliationSection()">
+                            <i class="fas fa-balance-scale me-2"></i>
+                            Start Reconciliation
+                        </button>
+                        <button class="btn btn-coral btn-lg" onclick="showReportsSection()">
+                            <i class="fas fa-chart-bar me-2"></i>
+                            Generate Report
+                        </button>
+                        <button class="btn btn-outline-navy btn-lg" onclick="showTransactionsSection()">
+                            <i class="fas fa-search me-2"></i>
+                            Transactions
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Status Card -->
+            <div class="card mt-3">
+                <div class="card-header bg-light-gray">
+                    <h6 class="mb-0 text-navy">
+                        <i class="fas fa-server me-2"></i>
+                        System Status
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="mb-2">
+                                <i class="fas fa-circle text-success"></i>
+                                <small class="ms-1">OCR Service</small>
+                            </div>
+                            <div class="mb-2">
+                                <i class="fas fa-circle text-success"></i>
+                                <small class="ms-1">Database</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="mb-2">
+                                <i class="fas fa-circle text-success"></i>
+                                <small class="ms-1">API</small>
+                            </div>
+                            <div class="mb-2">
+                                <i class="fas fa-circle text-warning"></i>
+                                <small class="ms-1">Queue</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center mt-3">
+                        <small class="text-muted">All systems operational</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerts & Notifications -->
+    {% if alerts %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        System Alerts
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% for alert in alerts %}
+                    <div class="alert alert-{{ alert.type }} alert-dismissible fade show">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>{{ alert.title }}</strong> {{ alert.message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+{# Removed duplicate endblock #}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Update last updated time
+    document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+    
+    // Initialize Volume Chart
+    const volumeCtx = document.getElementById('volumeChart').getContext('2d');
+    new Chart(volumeCtx, {
+        type: 'line',
+        data: {
+            <script>
+            function showDocumentsSection() {
+                document.getElementById('documentsSection').style.display = 'block';
+                document.getElementById('reconciliationSection').style.display = 'none';
+                document.getElementById('reportsSection').style.display = 'none';
+                document.getElementById('transactionsSection').style.display = 'none';
+            }
+            function showUploadModal() {
+                // Show upload modal logic here
+                alert('Show upload modal (inline, not backend redirect)');
+            }
+            function showReconciliationSection() {
+                document.getElementById('documentsSection').style.display = 'none';
+                document.getElementById('reconciliationSection').style.display = 'block';
+                document.getElementById('reportsSection').style.display = 'none';
+                document.getElementById('transactionsSection').style.display = 'none';
+            }
+            function showReportsSection() {
+                document.getElementById('documentsSection').style.display = 'none';
+                document.getElementById('reconciliationSection').style.display = 'none';
+                document.getElementById('reportsSection').style.display = 'block';
+                document.getElementById('transactionsSection').style.display = 'none';
+            }
+            function showTransactionsSection() {
+                document.getElementById('documentsSection').style.display = 'none';
+                document.getElementById('reconciliationSection').style.display = 'none';
+                document.getElementById('reportsSection').style.display = 'none';
+                document.getElementById('transactionsSection').style.display = 'block';
+            }
+            function showDocumentDetail(id) {
+                // Show document detail inline
+                alert('Show document detail for ID: ' + id);
+            }
+            // Existing dashboard JS logic...
+            document.addEventListener('DOMContentLoaded', function() {
+                var lastUpdated = document.getElementById('lastUpdated');
+                if (lastUpdated) lastUpdated.textContent = new Date().toLocaleTimeString();
+                // Initialize Volume Chart
+                const volumeCtx = document.getElementById('volumeChart').getContext('2d');
+                new Chart(volumeCtx, {
+                    type: 'line',
+                    data: {
+                        labels: {{ chart_labels|safe }},
+                        datasets: [{
+                            label: 'Documents Processed',
+                            data: {{ chart_data|safe }},
+                            borderColor: '#87CEEB',
+                            backgroundColor: 'rgba(135, 206, 235, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#1e3a8a',
+                            pointBorderColor: '#87CEEB',
+                            pointRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: {
+                                    color: 'rgba(0,0,0,0.1)'
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    color: 'rgba(0,0,0,0.1)'
+                                }
+                            }
+                        }
+                    }
+                });
+                // Initialize Status Chart
+                const statusCtx = document.getElementById('statusChart').getContext('2d');
+                new Chart(statusCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Completed', 'Processing', 'Pending', 'Failed'],
+                        datasets: [{
+                            data: {{ status_data|safe }},
+                            backgroundColor: ['#87CEEB', '#ffc107', '#6c757d', '#ff7f7f'],
+                            borderWidth: 0,
+                            cutout: '60%'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 20,
+                                    usePointStyle: true
+                                }
+                            }
+                        }
+                    }
+                });
+                // Auto-refresh every 5 minutes
+                setInterval(function() {
+                    location.reload();
+                }, 300000);
+                // Animate metric cards
+                const metricCards = document.querySelectorAll('.metric-card');
+                metricCards.forEach((card, index) => {
+                    setTimeout(() => {
+                        card.style.opacity = '1';
+                        card.style.transform = 'translateY(0)';
+                    }, index * 100);
+                });
+            });
+            </script>

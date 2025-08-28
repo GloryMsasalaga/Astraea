@@ -1,0 +1,405 @@
+{% extends 'base_new.html' %}
+{% load static %}
+
+{% block title %}Security Dashboard - AuditFlow{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="text-navy mb-1">
+                <i class="fas fa-shield-alt me-3 text-sky-blue"></i>
+                Security Dashboard
+            </h1>
+            <p class="text-muted mb-0">Monitor your account security and activity</p>
+        </div>
+        <div>
+            <button class="btn btn-outline-navy me-2" onclick="refreshDashboard()">
+                <i class="fas fa-sync-alt me-2"></i>Refresh
+            </button>
+            <a href="{% url 'security:2fa_setup' %}" class="btn btn-navy">
+                <i class="fas fa-cog me-2"></i>Security Settings
+            </a>
+        </div>
+    </div>
+
+    <!-- Security Status Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        {% if user.userprofile.two_factor_enabled %}
+                            <i class="fas fa-shield-alt text-success" style="font-size: 2.5rem;"></i>
+                        {% else %}
+                            <i class="fas fa-shield-alt text-warning" style="font-size: 2.5rem;"></i>
+                        {% endif %}
+                    </div>
+                    <h6 class="card-title text-navy">Two-Factor Auth</h6>
+                    <p class="card-text">
+                        {% if user.userprofile.two_factor_enabled %}
+                            <span class="badge bg-success">Enabled</span>
+                        {% else %}
+                            <span class="badge bg-warning">Disabled</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        {% if user.userprofile.account_locked %}
+                            <i class="fas fa-lock text-danger" style="font-size: 2.5rem;"></i>
+                        {% else %}
+                            <i class="fas fa-unlock text-success" style="font-size: 2.5rem;"></i>
+                        {% endif %}
+                    </div>
+                    <h6 class="card-title text-navy">Account Status</h6>
+                    <p class="card-text">
+                        {% if user.userprofile.account_locked %}
+                            <span class="badge bg-danger">Locked</span>
+                        {% else %}
+                            <span class="badge bg-success">Active</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-clock text-info" style="font-size: 2.5rem;"></i>
+                    </div>
+                    <h6 class="card-title text-navy">Last Login</h6>
+                    <p class="card-text">
+                        {% if user.last_login %}
+                            {{ user.last_login|date:"M d, Y H:i" }}
+                        {% else %}
+                            <span class="text-muted">Never</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        {% if user.userprofile.failed_login_attempts > 0 %}
+                            <i class="fas fa-exclamation-triangle text-warning" style="font-size: 2.5rem;"></i>
+                        {% else %}
+                            <i class="fas fa-check-circle text-success" style="font-size: 2.5rem;"></i>
+                        {% endif %}
+                    </div>
+                    <h6 class="card-title text-navy">Failed Attempts</h6>
+                    <p class="card-text">
+                        <span class="badge bg-{{ user.userprofile.failed_login_attempts|yesno:'warning,success' }}">
+                            {{ user.userprofile.failed_login_attempts }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security Alerts & Activity -->
+    <div class="row">
+        <!-- Recent Security Alerts -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 text-navy">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Recent Security Alerts
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_alerts %}
+                        <div class="list-group list-group-flush">
+                            {% for alert in recent_alerts %}
+                                <div class="list-group-item border-0 px-0">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex align-items-center mb-1">
+                                                {% if alert.alert_type == 'login_failure' %}
+                                                    <i class="fas fa-times-circle text-danger me-2"></i>
+                                                {% elif alert.alert_type == 'suspicious_activity' %}
+                                                    <i class="fas fa-eye text-warning me-2"></i>
+                                                {% elif alert.alert_type == 'account_lockout' %}
+                                                    <i class="fas fa-lock text-danger me-2"></i>
+                                                {% else %}
+                                                    <i class="fas fa-info-circle text-info me-2"></i>
+                                                {% endif %}
+                                                <span class="fw-semibold">{{ alert.get_alert_type_display }}</span>
+                                                <span class="badge bg-{{ alert.get_severity_color }} ms-2">
+                                                    {{ alert.get_severity_display }}
+                                                </span>
+                                            </div>
+                                            <p class="mb-1 text-muted small">{{ alert.message }}</p>
+                                            <small class="text-muted">
+                                                <i class="fas fa-map-marker-alt me-1"></i>{{ alert.ip_address }}
+                                                <span class="mx-2">•</span>
+                                                <i class="fas fa-clock me-1"></i>{{ alert.created_at|date:"M d, H:i" }}
+                                            </small>
+                                        </div>
+                                        {% if not alert.is_resolved %}
+                                            <button class="btn btn-sm btn-outline-secondary" 
+                                                    onclick="resolveAlert({{ alert.id }})">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="{% url 'security:alerts' %}" class="btn btn-outline-navy">
+                                View All Alerts
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-shield-alt text-success" style="font-size: 3rem;"></i>
+                            <h6 class="mt-3 text-navy">No Security Alerts</h6>
+                            <p class="text-muted">Your account is secure with no recent alerts.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Sessions -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 text-navy">
+                        <i class="fas fa-desktop me-2"></i>
+                        Active Sessions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if active_sessions %}
+                        <div class="list-group list-group-flush">
+                            {% for session in active_sessions %}
+                                <div class="list-group-item border-0 px-0">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex align-items-center mb-1">
+                                                {% if session.is_current %}
+                                                    <i class="fas fa-circle text-success me-2"></i>
+                                                    <span class="fw-semibold">Current Session</span>
+                                                {% else %}
+                                                    <i class="fas fa-circle text-info me-2"></i>
+                                                    <span>Active Session</span>
+                                                {% endif %}
+                                            </div>
+                                            <p class="mb-1 text-muted small">
+                                                <i class="fas fa-map-marker-alt me-1"></i>{{ session.ip_address }}
+                                                <span class="mx-2">•</span>
+                                                <i class="fas fa-globe me-1"></i>{{ session.user_agent|truncatechars:50 }}
+                                            </p>
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock me-1"></i>
+                                                Started: {{ session.created_at|date:"M d, H:i" }}
+                                                <span class="mx-2">•</span>
+                                                Last Activity: {{ session.last_activity|date:"M d, H:i" }}
+                                            </small>
+                                        </div>
+                                        {% if not session.is_current %}
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    onclick="terminateSession('{{ session.session_key }}')">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-desktop text-muted" style="font-size: 3rem;"></i>
+                            <h6 class="mt-3 text-navy">No Active Sessions</h6>
+                            <p class="text-muted">No other active sessions found.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 text-navy">
+                        <i class="fas fa-history me-2"></i>
+                        Recent Activity
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_activity %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Action</th>
+                                        <th>Details</th>
+                                        <th>IP Address</th>
+                                        <th>Timestamp</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for activity in recent_activity %}
+                                        <tr>
+                                            <td>
+                                                <i class="fas fa-{{ activity.get_action_icon }} me-2"></i>
+                                                {{ activity.get_action_display }}
+                                            </td>
+                                            <td>{{ activity.description|default:"-" }}</td>
+                                            <td>
+                                                <code>{{ activity.ip_address }}</code>
+                                            </td>
+                                            <td>{{ activity.timestamp|date:"M d, Y H:i:s" }}</td>
+                                            <td>
+                                                {% if activity.success %}
+                                                    <span class="badge bg-success">Success</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">Failed</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="{% url 'security:audit_log' %}" class="btn btn-outline-navy">
+                                View Full Activity Log
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-history text-muted" style="font-size: 3rem;"></i>
+                            <h6 class="mt-3 text-navy">No Recent Activity</h6>
+                            <p class="text-muted">No activity recorded for your account.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function refreshDashboard() {
+    location.reload();
+}
+
+function resolveAlert(alertId) {
+    if (confirm('Mark this alert as resolved?')) {
+        fetch(`/security/alerts/${alertId}/resolve/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Alert marked as resolved', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast('Failed to resolve alert', 'error');
+            }
+        })
+        .catch(error => {
+            showToast('Error resolving alert', 'error');
+            console.error('Error:', error);
+        });
+    }
+}
+
+function terminateSession(sessionKey) {
+    if (confirm('Terminate this session? The user will be logged out immediately.')) {
+        fetch(`/security/sessions/${sessionKey}/terminate/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Session terminated successfully', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showToast('Failed to terminate session', 'error');
+            }
+        })
+        .catch(error => {
+            showToast('Error terminating session', 'error');
+            console.error('Error:', error);
+        });
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function showToast(message, type) {
+    // Create toast element
+    const toastHtml = `
+        <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-${type === 'success' ? 'check' : 'exclamation-triangle'} me-2"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    // Add to toast container (create if doesn't exist)
+    let toastContainer = document.querySelector('.toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+    }
+    
+    toastContainer.innerHTML = toastHtml;
+    const toastElement = toastContainer.querySelector('.toast');
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+}
+
+// Auto-refresh dashboard every 5 minutes
+setInterval(refreshDashboard, 300000);
+</script>
+{% endblock %}

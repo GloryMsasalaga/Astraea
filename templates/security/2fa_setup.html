@@ -1,0 +1,264 @@
+{% extends 'base_new.html' %}
+{% load static %}
+
+{% block title %}Setup Two-Factor Authentication - AuditFlow{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="text-navy mb-1">
+                <i class="fas fa-shield-alt me-3 text-sky-blue"></i>
+                Setup Two-Factor Authentication
+            </h1>
+            <p class="text-muted mb-0">Add an extra layer of security to your account</p>
+        </div>
+        <div>
+            <a href="{% url 'settings' %}" class="btn btn-outline-navy">
+                <i class="fas fa-arrow-left me-2"></i>Back to Settings
+            </a>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Messages -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {% if message.tags == 'error' %}
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                        {% else %}
+                            <i class="fas fa-check-circle me-2"></i>
+                        {% endif %}
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Setup Process -->
+            <div class="card rounded-3 shadow-sm">
+                <div class="card-header bg-sky-blue text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-mobile-alt me-2"></i>
+                        Configure Your Authenticator App
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <!-- Step 1: Download App -->
+                    <div class="mb-5">
+                        <h6 class="text-navy mb-3">
+                            <span class="badge bg-navy rounded-circle me-2">1</span>
+                            Download an Authenticator App
+                        </h6>
+                        <p class="text-muted mb-3">
+                            Install one of these recommended authenticator apps on your mobile device:
+                        </p>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-center p-3 border rounded-3">
+                                    <i class="fab fa-google text-primary me-3" style="font-size: 1.5rem;"></i>
+                                    <div>
+                                        <div class="fw-semibold">Google Authenticator</div>
+                                        <small class="text-muted">Free • iOS & Android</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-center p-3 border rounded-3">
+                                    <i class="fas fa-shield-alt text-success me-3" style="font-size: 1.5rem;"></i>
+                                    <div>
+                                        <div class="fw-semibold">Authy</div>
+                                        <small class="text-muted">Free • iOS & Android</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-flex align-items-center p-3 border rounded-3">
+                                    <i class="fab fa-microsoft text-info me-3" style="font-size: 1.5rem;"></i>
+                                    <div>
+                                        <div class="fw-semibold">Microsoft Authenticator</div>
+                                        <small class="text-muted">Free • iOS & Android</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Scan QR Code -->
+                    <div class="mb-5">
+                        <h6 class="text-navy mb-3">
+                            <span class="badge bg-navy rounded-circle me-2">2</span>
+                            Scan QR Code or Enter Secret Key
+                        </h6>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="text-center p-4 border rounded-3 bg-light">
+                                    <h6 class="text-navy mb-3">Scan with your app</h6>
+                                    {% if qr_code %}
+                                        <img src="data:image/png;base64,{{ qr_code }}" 
+                                             alt="QR Code for 2FA setup" 
+                                             class="img-fluid rounded"
+                                             style="max-width: 200px;">
+                                    {% else %}
+                                        <div class="text-muted">
+                                            <i class="fas fa-exclamation-circle"></i>
+                                            QR Code not available
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="p-4 border rounded-3">
+                                    <h6 class="text-navy mb-3">Or enter manually</h6>
+                                    <p class="text-muted small mb-2">
+                                        If you can't scan the QR code, enter this secret key in your app:
+                                    </p>
+                                    <div class="input-group">
+                                        <input type="text" 
+                                               class="form-control font-monospace" 
+                                               value="{{ secret_key }}" 
+                                               readonly
+                                               id="secretKey">
+                                        <button class="btn btn-outline-secondary" 
+                                                type="button" 
+                                                onclick="copySecretKey()"
+                                                data-bs-toggle="tooltip"
+                                                title="Copy to clipboard">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    </div>
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <strong>Account:</strong> {{ user.email }}<br>
+                                            <strong>Issuer:</strong> AuditFlow
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Verify -->
+                    <div class="mb-4">
+                        <h6 class="text-navy mb-3">
+                            <span class="badge bg-navy rounded-circle me-2">3</span>
+                            Verify Setup
+                        </h6>
+                        <p class="text-muted mb-3">
+                            Enter the 6-digit code from your authenticator app to complete setup:
+                        </p>
+                        
+                        <form method="post" class="needs-validation" novalidate>
+                            {% csrf_token %}
+                            <div class="row align-items-end">
+                                <div class="col-md-4">
+                                    <label for="verification_token" class="form-label fw-semibold">
+                                        Verification Code
+                                    </label>
+                                    <input type="text" 
+                                           class="form-control form-control-lg text-center" 
+                                           id="verification_token"
+                                           name="verification_token" 
+                                           placeholder="000000"
+                                           pattern="[0-9]{6}"
+                                           maxlength="6"
+                                           required
+                                           style="letter-spacing: 0.3em; font-size: 1.2rem;">
+                                </div>
+                                <div class="col-md-4">
+                                    <button type="submit" class="btn btn-navy btn-lg w-100">
+                                        <i class="fas fa-check me-2"></i>
+                                        Enable 2FA
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Security Notice -->
+                    <div class="alert alert-info" role="alert">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Important:</strong> Once enabled, you'll need your authenticator app every time you log in. 
+                        Make sure to save your backup codes in a secure location.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copySecretKey() {
+    const secretKeyInput = document.getElementById('secretKey');
+    secretKeyInput.select();
+    secretKeyInput.setSelectionRange(0, 99999); // For mobile devices
+    
+    try {
+        document.execCommand('copy');
+        showToast('Secret key copied to clipboard!', 'success');
+    } catch (err) {
+        showToast('Failed to copy secret key', 'error');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus verification input
+    const verificationInput = document.getElementById('verification_token');
+    if (verificationInput) {
+        verificationInput.focus();
+        
+        // Only allow numeric input
+        verificationInput.addEventListener('keypress', function(e) {
+            if (!/[0-9]/.test(String.fromCharCode(e.which))) {
+                e.preventDefault();
+            }
+        });
+        
+        // Auto-format as user types
+        verificationInput.addEventListener('input', function() {
+            this.value = this.value.replace(/\D/g, '').substring(0, 6);
+        });
+    }
+    
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+
+function showToast(message, type) {
+    // Create toast element
+    const toastHtml = `
+        <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-${type === 'success' ? 'check' : 'exclamation-triangle'} me-2"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    // Add to toast container (create if doesn't exist)
+    let toastContainer = document.querySelector('.toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        document.body.appendChild(toastContainer);
+    }
+    
+    toastContainer.innerHTML = toastHtml;
+    const toastElement = toastContainer.querySelector('.toast');
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+}
+</script>
+{% endblock %}

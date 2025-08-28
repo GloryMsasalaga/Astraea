@@ -1,0 +1,375 @@
+{% extends 'dashboard.html' %}
+{% load static %}
+
+{% block title %}Upload Documents - AuditFlow{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="text-navy mb-1">
+                        <i class="fas fa-cloud-upload-alt me-3 text-sky-blue"></i>
+                        Upload Documents
+                    </h1>
+                    <p class="text-muted mb-0">Upload and process invoices, receipts, and financial documents</p>
+                </div>
+                <div>
+                    <a href="{% url 'documents:documents-list' %}" class="btn btn-outline-navy">
+                        <i class="fas fa-list me-2"></i>View All Documents
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Form -->
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-sky-blue">
+                    <h5 class="mb-0 text-white">
+                        <i class="fas fa-file-upload me-2"></i>
+                        Document Upload
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- File Upload Area -->
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">
+                                <i class="fas fa-paperclip me-2 text-navy"></i>
+                                Select Files
+                            </label>
+                            <div class="file-upload-area" id="fileUploadArea">
+                                <div class="upload-text">
+                                    <i class="fas fa-cloud-upload-alt file-upload-icon"></i>
+                                    <div class="h5 mb-3">Drag & Drop Files Here</div>
+                                    <div class="text-muted mb-3">or click to select files</div>
+                                    <div class="mb-3">
+                                        <span class="badge bg-light text-dark me-2">PDF</span>
+                                        <span class="badge bg-light text-dark me-2">JPG</span>
+                                        <span class="badge bg-light text-dark me-2">PNG</span>
+                                        <span class="badge bg-light text-dark me-2">TIFF</span>
+                                    </div>
+                                    <small class="text-muted">Maximum file size: 10MB per file</small>
+                                </div>
+                                <input type="file" 
+                                       name="documents" 
+                                       id="documentFiles" 
+                                       multiple 
+                                       accept=".pdf,.jpg,.jpeg,.png,.tiff,.tif"
+                                       style="display: none;"
+                                       required>
+                            </div>
+                            <div class="invalid-feedback">
+                                Please select at least one file to upload.
+                            </div>
+                        </div>
+
+                        <!-- Document Information -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="documentType" class="form-label fw-semibold">
+                                    <i class="fas fa-tag me-2 text-navy"></i>
+                                    Document Type
+                                </label>
+                                <select class="form-select" id="documentType" name="document_type" required>
+                                    <option value="">Choose document type...</option>
+                                    <option value="invoice">Invoice</option>
+                                    <option value="receipt">Receipt</option>
+                                    <option value="bank_statement">Bank Statement</option>
+                                    <option value="expense_report">Expense Report</option>
+                                    <option value="contract">Contract</option>
+                                    <option value="tax_document">Tax Document</option>
+                                    <option value="other">Other</option>
+                                </select>
+                                <div class="invalid-feedback">
+                                    Please select a document type.
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="priority" class="form-label fw-semibold">
+                                    <i class="fas fa-exclamation-circle me-2 text-navy"></i>
+                                    Priority
+                                </label>
+                                <select class="form-select" id="priority" name="priority">
+                                    <option value="normal">Normal</option>
+                                    <option value="high">High</option>
+                                    <option value="urgent">Urgent</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="mb-4">
+                            <label for="description" class="form-label fw-semibold">
+                                <i class="fas fa-comment me-2 text-navy"></i>
+                                Description <span class="text-muted">(Optional)</span>
+                            </label>
+                            <textarea class="form-control" 
+                                      id="description" 
+                                      name="description" 
+                                      rows="3"
+                                      placeholder="Add any additional notes or descriptions for these documents..."></textarea>
+                        </div>
+
+                        <!-- Processing Options -->
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">
+                                <i class="fas fa-cogs me-2 text-navy"></i>
+                                Processing Options
+                            </label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="enableOCR" name="enable_ocr" checked>
+                                        <label class="form-check-label" for="enableOCR">
+                                            <i class="fas fa-text-width me-1 text-sky-blue"></i>
+                                            Enable OCR Text Extraction
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="autoProcess" name="auto_process" checked>
+                                        <label class="form-check-label" for="autoProcess">
+                                            <i class="fas fa-magic me-1 text-sky-blue"></i>
+                                            Auto-process for reconciliation
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
+                                <i class="fas fa-undo me-2"></i>
+                                Reset Form
+                            </button>
+                            <div>
+                                <button type="submit" name="action" value="save_draft" class="btn btn-outline-navy me-2">
+                                    <i class="fas fa-save me-2"></i>
+                                    Save as Draft
+                                </button>
+                                <button type="submit" 
+                                        name="action" 
+                                        value="upload_process" 
+                                        class="btn btn-navy"
+                                        data-loading="Uploading & Processing...">
+                                    <i class="fas fa-upload me-2"></i>
+                                    Upload & Process
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Guidelines -->
+    <div class="row mt-4">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-light-gray">
+                    <h6 class="mb-0 text-navy">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Upload Guidelines
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-sky-blue">Supported Formats</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success me-2"></i>PDF documents (.pdf)</li>
+                                <li><i class="fas fa-check text-success me-2"></i>JPEG images (.jpg, .jpeg)</li>
+                                <li><i class="fas fa-check text-success me-2"></i>PNG images (.png)</li>
+                                <li><i class="fas fa-check text-success me-2"></i>TIFF images (.tiff, .tif)</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-sky-blue">Best Practices</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-lightbulb text-warning me-2"></i>Scan at 300 DPI for best OCR results</li>
+                                <li><i class="fas fa-lightbulb text-warning me-2"></i>Ensure text is clear and readable</li>
+                                <li><i class="fas fa-lightbulb text-warning me-2"></i>Keep file sizes under 10MB</li>
+                                <li><i class="fas fa-lightbulb text-warning me-2"></i>Group related documents together</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="alert alert-sky-blue mt-3">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        <strong>Security Notice:</strong> All uploaded documents are encrypted and stored securely. 
+                        Your data is protected with enterprise-grade security measures.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Progress Modal -->
+<div class="modal fade" id="uploadProgressModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-sky-blue text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-upload me-2"></i>
+                    Uploading Documents
+                </h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <div class="spinner-border text-sky-blue mb-3" role="status">
+                        <span class="visually-hidden">Uploading...</span>
+                    </div>
+                </div>
+                <h6 id="uploadStatus">Preparing upload...</h6>
+                <div class="progress mb-3">
+                    <div class="progress-bar" id="uploadProgress" style="width: 0%"></div>
+                </div>
+                <p class="text-muted mb-0" id="uploadDetails">Please wait while we process your documents.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const fileInput = document.getElementById('documentFiles');
+    const uploadArea = document.getElementById('fileUploadArea');
+    
+    // Handle form submission
+    form.addEventListener('submit', function(e) {
+        if (this.checkValidity()) {
+            e.preventDefault();
+            showUploadProgress();
+            
+            // Simulate upload progress
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        document.getElementById('uploadStatus').textContent = 'Upload Complete!';
+                        document.getElementById('uploadDetails').textContent = 'Redirecting to document list...';
+                        setTimeout(() => {
+                            window.location.href = "{% url 'documents:documents-list' %}";
+                        }, 2000);
+                    }, 500);
+                }
+                
+                document.getElementById('uploadProgress').style.width = progress + '%';
+                
+                if (progress < 30) {
+                    document.getElementById('uploadStatus').textContent = 'Uploading files...';
+                } else if (progress < 70) {
+                    document.getElementById('uploadStatus').textContent = 'Processing with OCR...';
+                } else if (progress < 95) {
+                    document.getElementById('uploadStatus').textContent = 'Extracting data...';
+                } else {
+                    document.getElementById('uploadStatus').textContent = 'Finalizing...';
+                }
+            }, 200);
+            
+            // Actually submit the form (comment out the above simulation in production)
+            // this.submit();
+        }
+    });
+    
+    // File validation
+    fileInput.addEventListener('change', function(e) {
+        const files = Array.from(e.target.files);
+        let valid = true;
+        let errors = [];
+        
+        files.forEach(file => {
+            // Check file size (10MB limit)
+            if (file.size > 10 * 1024 * 1024) {
+                valid = false;
+                errors.push(`File "${file.name}" is too large (max 10MB)`);
+            }
+            
+            // Check file type
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/tiff', 'application/pdf'];
+            if (!allowedTypes.includes(file.type)) {
+                valid = false;
+                errors.push(`File "${file.name}" has unsupported format`);
+            }
+        });
+        
+        if (!valid) {
+            e.target.value = '';
+            showNotification(errors.join('<br>'), 'danger');
+            resetUploadArea();
+        }
+    });
+});
+
+function showUploadProgress() {
+    const modal = new bootstrap.Modal(document.getElementById('uploadProgressModal'));
+    modal.show();
+}
+
+function resetForm() {
+    document.querySelector('form').reset();
+    resetUploadArea();
+}
+
+function resetUploadArea() {
+    const uploadArea = document.getElementById('fileUploadArea');
+    const uploadText = uploadArea.querySelector('.upload-text');
+    
+    uploadText.innerHTML = `
+        <i class="fas fa-cloud-upload-alt file-upload-icon"></i>
+        <div class="h5 mb-3">Drag & Drop Files Here</div>
+        <div class="text-muted mb-3">or click to select files</div>
+        <div class="mb-3">
+            <span class="badge bg-light text-dark me-2">PDF</span>
+            <span class="badge bg-light text-dark me-2">JPG</span>
+            <span class="badge bg-light text-dark me-2">PNG</span>
+            <span class="badge bg-light text-dark me-2">TIFF</span>
+        </div>
+        <small class="text-muted">Maximum file size: 10MB per file</small>
+    `;
+    
+    // Remove any file info
+    const fileInfo = uploadArea.parentElement.querySelector('.file-info');
+    if (fileInfo) {
+        fileInfo.remove();
+    }
+}
+
+function showNotification(message, type) {
+    const alertClass = `alert-${type}`;
+    const notification = document.createElement('div');
+    notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentElement) {
+            const alert = new bootstrap.Alert(notification);
+            alert.close();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

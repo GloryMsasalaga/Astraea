@@ -1,0 +1,143 @@
+{% extends 'base_new.html' %}
+{% load static %}
+
+{% block title %}Two-Factor Authentication - AuditFlow{% endblock %}
+
+{% block content %}
+<div class="container-fluid d-flex align-items-center justify-content-center min-vh-100">
+    <div class="row justify-content-center w-100">
+        <div class="col-md-6 col-lg-4">
+            <div class="card rounded-3 shadow-lg border-0">
+                <div class="card-body p-5">
+                    <!-- Logo and Header -->
+                    <div class="text-center mb-4">
+                        <i class="fas fa-shield-alt text-sky-blue" style="font-size: 3rem;"></i>
+                        <h2 class="text-navy mt-3 mb-2">Two-Factor Authentication</h2>
+                        <p class="text-muted">Enter the 6-digit code from your authenticator app</p>
+                    </div>
+
+                    <!-- User Info -->
+                    <div class="text-center mb-4">
+                        <div class="d-inline-flex align-items-center bg-light rounded-pill px-3 py-2">
+                            <i class="fas fa-user text-sky-blue me-2"></i>
+                            <span class="fw-semibold">{{ username }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Messages -->
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {% if message.tags == 'error' %}
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                {% else %}
+                                    <i class="fas fa-info-circle me-2"></i>
+                                {% endif %}
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <!-- 2FA Form -->
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label for="{{ form.token.id_for_label }}" class="form-label fw-semibold text-center d-block">
+                                <i class="fas fa-mobile-alt me-2 text-navy"></i>
+                                Verification Code
+                            </label>
+                            {{ form.token }}
+                            {% if form.token.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.token.errors.0 }}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted d-block text-center mt-2">
+                                Open your authenticator app and enter the 6-digit code
+                            </small>
+                        </div>
+
+                        <div class="d-grid mb-4">
+                            <button type="submit" class="btn btn-navy btn-lg">
+                                <i class="fas fa-check me-2"></i>
+                                Verify & Sign In
+                            </button>
+                        </div>
+
+                        <div class="text-center">
+                            <a href="{% url 'login' %}" class="text-decoration-none text-muted">
+                                <i class="fas fa-arrow-left me-1"></i>
+                                Back to Login
+                            </a>
+                        </div>
+                    </form>
+
+                    <!-- Help Section -->
+                    <div class="mt-4 p-3 bg-light rounded-3">
+                        <h6 class="text-navy mb-2">
+                            <i class="fas fa-question-circle me-2"></i>
+                            Need Help?
+                        </h6>
+                        <small class="text-muted">
+                            <ul class="list-unstyled mb-0">
+                                <li>• Check that your device's time is correct</li>
+                                <li>• Make sure you're using the latest code</li>
+                                <li>• Try generating a new code if expired</li>
+                                <li>• Contact support if you've lost your device</li>
+                            </ul>
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Notice -->
+            <div class="text-center mt-3">
+                <small class="text-muted">
+                    <i class="fas fa-lock me-1"></i>
+                    Your session is secured with enterprise-grade encryption
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus the token input
+    const tokenInput = document.getElementById('{{ form.token.id_for_label }}');
+    if (tokenInput) {
+        tokenInput.focus();
+        
+        // Auto-submit when 6 digits are entered
+        tokenInput.addEventListener('input', function() {
+            if (this.value.length === 6 && /^\d{6}$/.test(this.value)) {
+                // Add slight delay for better UX
+                setTimeout(() => {
+                    this.form.submit();
+                }, 300);
+            }
+        });
+        
+        // Only allow numeric input
+        tokenInput.addEventListener('keypress', function(e) {
+            if (!/[0-9]/.test(String.fromCharCode(e.which))) {
+                e.preventDefault();
+            }
+        });
+    }
+    
+    // Auto-dismiss alerts after 5 seconds
+    setTimeout(function() {
+        const alerts = document.querySelectorAll('.alert[data-auto-hide]');
+        alerts.forEach(function(alert) {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+});
+</script>
+{% endblock %}

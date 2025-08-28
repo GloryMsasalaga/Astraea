@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="theme-color" content="#1e3a8a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>{% block title %}Astraea - Professional Accounting System{% endblock %}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom CSS -->
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    
+    
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body class="bg-light">
+
+    {% if user.is_authenticated %}
+    <!-- Top Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-navy fixed-top shadow-sm">
+        <div class="container-fluid">
+            <!-- Brand -->
+            <a class="navbar-brand fw-bold" href="{% url 'frontend:dashboard' %}">
+                <i class="fas fa-chart-line me-2 text-sky-blue"></i>
+                Astraea
+            </a>
+            
+            <!-- Mobile Sidebar Toggle -->
+            <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <!-- Right Side Items -->
+            <div class="d-flex align-items-center ms-auto">
+                <!-- Search -->
+                <div class="me-3 d-none d-md-block">
+                    <div class="input-group">
+                        <input type="text" class="form-control form-control-sm" placeholder="Search..." id="globalSearch">
+                        <button class="btn btn-outline-sky-blue btn-sm" type="button">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Notifications -->
+                <div class="dropdown me-3">
+                    <button class="btn btn-link text-white position-relative" data-bs-toggle="dropdown">
+                        <i class="fas fa-bell"></i>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-coral">
+                            3
+                        </span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end notification-dropdown">
+                        <li><h6 class="dropdown-header">Recent Notifications</h6></li>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-info-circle me-2 text-sky-blue"></i>Processing complete for Invoice #123</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-exclamation-triangle me-2 text-warning"></i>5 items need reconciliation</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-check-circle me-2 text-success"></i>Monthly report generated</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-center small" href="#">View all notifications</a></li>
+                    </ul>
+                </div>
+                
+                <!-- User Dropdown -->
+                <div class="dropdown">
+                    <button class="btn btn-link text-white dropdown-toggle d-flex align-items-center" data-bs-toggle="dropdown">
+                        <div class="rounded-circle bg-sky-blue d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                            <i class="fas fa-user text-white"></i>
+                        </div>
+                        <span class="d-none d-md-inline">{{ user.get_full_name|default:user.username }}</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><h6 class="dropdown-header">{{ user.get_full_name|default:user.username }}</h6></li>
+                        <li><a class="dropdown-item" href="{% url 'frontend:settings' %}"><i class="fas fa-user-edit me-2"></i>Profile</a></li>
+                        <li><a class="dropdown-item" href="{% url 'frontend:settings' %}"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="fas fa-question-circle me-2"></i>Help</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="{% url 'frontend:logout' %}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <div class="offcanvas-lg offcanvas-start sidebar" tabindex="-1" id="sidebar">
+        <div class="offcanvas-header d-lg-none bg-navy">
+            <h5 class="offcanvas-title text-white">Navigation</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body p-0">
+            <nav class="nav flex-column h-100">
+                <div class="nav-section">
+                <a class="navbar-brand fw-bold" href="{% url 'frontend:dashboard' %}">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'frontend:dashboard' %}">
+                        <i class="fas fa-tachometer-alt me-3"></i>
+                        <span>Dashboard</span>
+                    </a>
+                    <a class="nav-link {% if 'transactions' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'frontend:transactions' %}">
+                        <i class="fas fa-exchange-alt me-3"></i>
+                        <span>Transactions</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <small class="nav-section-title">DOCUMENTS</small>
+                    <a class="nav-link {% if 'documents' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'documents:document-upload' %}">
+                        <i class="fas fa-file-alt me-3"></i>
+                        <span>All Documents</span>
+                    </a>
+                    <a class="nav-link" href="{% url 'documents:document-upload' %}">
+                        <i class="fas fa-cloud-upload-alt me-3"></i>
+                        <span>Upload</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <small class="nav-section-title">ANALYSIS</small>
+                    <a class="nav-link {% if 'reconciliation' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'reconciliation:session-list' %}">
+                        <i class="fas fa-balance-scale me-3"></i>
+                        <span>Reconciliation</span>
+                    </a>
+                    <a class="nav-link {% if 'reports' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'reports:generated-list' %}">
+                        <i class="fas fa-chart-bar me-3"></i>
+                        <span>Reports</span>
+                    </a>
+                </div>
+                
+                <div class="nav-section mt-auto">
+                    <small class="nav-section-title">SYSTEM</small>
+                    <a class="nav-link {% if 'settings' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'frontend:settings' %}">
+                        <i class="fas fa-cog me-3"></i>
+                        <span>Settings</span>
+                    </a>
+                </div>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+        <!-- Alert Messages -->
+        {% if messages %}
+            <div class="container-fluid">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show rounded-3 shadow-sm" role="alert">
+                        <i class="fas fa-info-circle me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+    <!-- Page Content -->
+    {# Removed duplicate block content #}
+    {% comment %} {% block content %}{% endblock %} {% endcomment %}
+    </div>
+
+    {% else %}
+    <!-- Login Layout -->
+    {% block content %}{% endblock %}
+    {% endif %}
+
+    <!-- Footer (only show on login/register pages) -->
+    {% if not user.is_authenticated %}
+    <footer class="bg-dark text-white py-3 position-fixed bottom-0 w-100">
+        <div class="container-fluid px-3">
+            <div class="row align-items-center g-2">
+                <div class="col-12 col-md-6 text-center text-md-start">
+                    <p class="mb-0 small">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        © 2025 Astraea - Enterprise Security
+                    </p>
+                </div>
+                <div class="col-12 col-md-6 text-center text-md-end">
+                    <small class="text-muted">
+                        <a href="#" class="text-white-50 text-decoration-none me-2 me-sm-3">Privacy Policy</a>
+                        <a href="#" class="text-white-50 text-decoration-none me-2 me-sm-3">Terms of Service</a>
+                        <a href="#" class="text-white-50 text-decoration-none">Help</a>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </footer>
+    {% endif %}
+
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="successToast" class="toast align-items-center text-white bg-success border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <span id="successToastMessage">Operation completed successfully!</span>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+        <div id="errorToast" class="toast align-items-center text-white bg-danger border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <span id="errorToastMessage">An error occurred!</span>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    
+    <!-- jQuery (required for DataTables) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script src="{% static 'js/main.js' %}"></script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+
+</html>
