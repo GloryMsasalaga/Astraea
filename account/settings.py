@@ -256,9 +256,9 @@ LOGGING = {
 }
 
 # Authentication settings
-LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/dashboard/'
-LOGOUT_REDIRECT_URL = '/login/'
+LOGIN_URL = '/security/login/'
+LOGIN_REDIRECT_URL = '/security/dashboard/'
+LOGOUT_REDIRECT_URL = '/security/login/'
 
 # Authentication backends
 AUTHENTICATION_BACKENDS = [

@@ -5784,3 +5784,18 @@ Not Found: /.well-known/appspecific/com.chrome.devtools.json
 "GET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1" 404 4346
 "GET /static/css/style.css HTTP/1.1" 200 28558
 "GET /static/js/main.js HTTP/1.1" 200 13032
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+C:\Users\hp\agness\account\security\middleware.py changed, reloading.
+Watching for file changes with StatReloader
+C:\Users\hp\agness\account\security\middleware.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+C:\Users\hp\AppData\Local\Programs\Python\Python311\Lib\site-packages\sqlparse\filters\right_margin.py changed, reloading.
+Watching for file changes with StatReloader
+Watching for file changes with StatReloader
+"GET / HTTP/1.1" 200 40355
+"GET /security/login/ HTTP/1.1" 200 19084
+"GET /static/js/main.js HTTP/1.1" 304 0

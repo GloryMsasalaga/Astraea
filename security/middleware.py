@@ -63,9 +63,9 @@ class AuditLogMiddleware(MiddlewareMixin):
         method = request.method
         
         # Map URLs to actions
-        if path == '/login/' and method == 'POST' and response.status_code == 302:
+        if path == '/security/login/' and method == 'POST' and response.status_code == 302:
             return 'login'
-        elif path == '/logout/':
+        elif path == '/security/logout/':
             return 'logout'
         elif 'documents' in path and method == 'POST':
             return 'document_upload'
