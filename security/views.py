@@ -4,10 +4,13 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import TemplateView, FormView
-from django.contrib import messages
 from django.http import JsonResponse
-from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from django.contrib import messages
+import logging
+
+logger = logging.getLogger(__name__)
 from .authentication import SecureAuthenticationBackend
 from django.utils import timezone
 from django.core.paginator import Paginator
@@ -58,6 +61,7 @@ class SecureLoginView(FormView):
         username = form.cleaned_data['username']
         password = form.cleaned_data['password']
         try:
+            logger.info(f'Login attempt for user: {username}')  # Log login attempt
             # Use custom authentication backend
             backend = SecureAuthenticationBackend()
             user = backend.authenticate(self.request, username=username, password=password)
@@ -66,10 +70,12 @@ class SecureLoginView(FormView):
                 user.backend = 'security.authentication.SecureAuthenticationBackend'
                 # Check if 2FA is enabled
                 if hasattr(user, 'userprofile') and user.userprofile.two_factor_enabled:
+                    logger.info(f'User {username} has 2FA enabled, redirecting to 2FA verification')
                     self.request.session['pre_2fa_user_id'] = user.id
                     self.request.session['pre_2fa_username'] = username
                     return redirect('security:2fa_verify')
                 else:
+                    logger.info(f'User {username} logged in successfully, redirecting to dashboard')
                     login(self.request, user)
                     AuditLog.objects.create(
                         user=user,
@@ -94,10 +100,13 @@ class SecureLoginView(FormView):
                     messages.success(self.request, 'Welcome back! You have been logged in successfully.')
                     next_url = self.request.GET.get('next', None)
                     if next_url:
+                        logger.info(f'Redirecting to next URL: {next_url}')  # Log redirect
                         return redirect(next_url)
                     else:
+                        logger.info('Redirecting to dashboard')  # Log redirect
                         return redirect('security:dashboard')
             else:
+                logger.warning(f'Login failed for user: {username}')  # Log failed login
                 AuditLog.objects.create(
                     user=None,
                     action='login_failed',
@@ -116,6 +125,7 @@ class SecureLoginView(FormView):
                 messages.error(self.request, 'Invalid username or password.')
                 return self.form_invalid(form)
         except Exception as e:
+            logger.error(f'Login error for user: {username}, Error: {str(e)}')  # Log error
             messages.error(self.request, f'Login error: {str(e)}')
             return redirect('security:login')
     
@@ -346,9 +356,12 @@ class TwoFactorVerifyView(FormView):
             user = User.objects.get(id=user_id)
             profile = user.userprofile
             
+            logger.info(f'2FA verification attempt for user ID: {user_id}')  # Log 2FA attempt
+            
             # Verify TOTP token
             totp = pyotp.TOTP(profile.totp_secret)
             if totp.verify(token, valid_window=1):
+                logger.info(f'2FA verification successful for user: {user.username}')  # Log success
                 # Set the backend attribute on the user object
                 user.backend = 'security.authentication.SecureAuthenticationBackend'
                 
@@ -382,8 +395,10 @@ class TwoFactorVerifyView(FormView):
                 )
                 
                 messages.success(self.request, 'Two-factor authentication successful. Welcome back!')
+                logger.info(f'User {user.username} logged in successfully via 2FA, redirecting to dashboard')  # Log redirect
                 return redirect('security:dashboard')
             else:
+                logger.warning(f'2FA verification failed for user: {user.username}')  # Log failed 2FA
                 # Log failed 2FA attempt
                 AuditLog.objects.create(
                     user=user,
@@ -401,6 +416,7 @@ class TwoFactorVerifyView(FormView):
                 return self.form_invalid(form)
                 
         except Exception as e:
+            logger.error(f'2FA verification error for user ID: {user_id}, Error: {str(e)}')  # Log error
             messages.error(self.request, 'An error occurred during verification.')
             return redirect('security:login')
     
